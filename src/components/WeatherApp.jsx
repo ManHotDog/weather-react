@@ -2,6 +2,69 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { draggable, dropTargetForElements, monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 
+const cities = [
+    // You'll need to import and parse your worldcities.csv data here
+    // For now, I'll show the structure
+    { name: "London", country: "United Kingdom", lat: "51.5074", lon: "-0.1278" },
+    // ... more cities
+];
+
+const SearchBox = ({ onLocationSelect }) => {
+    const [searchText, setSearchText] = useState("");
+    const [suggestions, setSuggestions] = useState([]);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSearch = (text) => {
+        setSearchText(text);
+        if (text.trim().length > 1) {
+            const filtered = cities
+                .filter(city => 
+                    city.name.toLowerCase().includes(text.toLowerCase()) ||
+                    city.country.toLowerCase().includes(text.toLowerCase())
+                )
+                .slice(0, 5); // Limit to 5 suggestions
+            setSuggestions(filtered);
+            setIsOpen(true);
+        } else {
+            setSuggestions([]);
+            setIsOpen(false);
+        }
+    };
+
+    const handleSelect = (city) => {
+        setSearchText(city.name);
+        setIsOpen(false);
+        onLocationSelect(`${city.lat},${city.lon}`);
+    };
+
+    return (
+        <div className="relative w-full sm:w-64">
+            <input
+                type="text"
+                placeholder="Search for a city..."
+                className="p-3 border border-gray-300 rounded-lg w-full bg-white/80 backdrop-blur-sm"
+                value={searchText}
+                onChange={(e) => handleSearch(e.target.value)}
+                onFocus={() => searchText.trim().length > 1 && setIsOpen(true)}
+            />
+            {isOpen && suggestions.length > 0 && (
+                <div className="absolute w-full mt-1 bg-white rounded-lg shadow-lg max-h-60 overflow-auto z-50">
+                    {suggestions.map((city, index) => (
+                        <button
+                            key={`${city.name}-${index}`}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex flex-col"
+                            onClick={() => handleSelect(city)}
+                        >
+                            <span className="font-medium">{city.name}</span>
+                            <span className="text-sm text-gray-600">{city.country}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const WeatherApp = () => {
     const [city, setCity] = useState("");
     const [weatherData, setWeatherData] = useState(null);
@@ -132,31 +195,13 @@ const WeatherApp = () => {
                     
                     {/* Search Section */}
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center mb-4 sm:mb-8">
-                        <input
-                            type="text"
-                            placeholder="Enter city name"
-                            className="p-3 border border-gray-300 rounded-lg w-full sm:w-64 bg-white/80 backdrop-blur-sm"
-                            value={city}
-                            onChange={(e) => setCity(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                        />
-                        <div className="flex gap-2 sm:gap-4">
-                            <button
-                                onClick={handleSearch}
-                                className="flex-1 sm:flex-none bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
-                                disabled={loading}
-                            >
-                                {loading ? (
-                                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                                ) : "Get Weather"}
-                            </button>
-                            <button
-                                onClick={() => setUnit(unit === "C" ? "F" : "C")}
-                                className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg transition-colors duration-200"
-                            >
-                                °{unit === "C" ? "F" : "C"}
-                            </button>
-                        </div>
+                        <SearchBox onLocationSelect={fetchWeather} />
+                        <button
+                            onClick={() => setUnit(unit === "C" ? "F" : "C")}
+                            className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg transition-colors duration-200"
+                        >
+                            °{unit === "C" ? "F" : "C"}
+                        </button>
                     </div>
 
                     {/* Saved Locations */}
